@@ -79,4 +79,6 @@ while gameOver == False:
 # print out the final screen
 if(deck.containsMonsters() == False and game.monsterCheck() == False):
   print("You emerge bloody and beaten from the dungeon,\nbut the Donsols have been defeated, the evil rests for now.")
+elif game.health <= 0:
+  print("The creature's blow lands true. You're unconcious before you strike the ground.")
 print('Game Over!')

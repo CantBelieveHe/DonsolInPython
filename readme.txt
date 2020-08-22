@@ -1,17 +1,11 @@
-# DonsolInPython
+Donsol Info:
+
 Designed by John Eternal, Donsol is a game where you explore a dungeon made out of a standard 54-card deck. You win the game by elimnating all monsters from the deck.
-Remade in python to run in the command line by me.
 Check out the original here:
 https://100r.co/site/donsol.html#what_is_donsol?
 https://wiki.xxiivv.com/site/donsol.html
 
-# How To Play:
-Download this repo,
-Open up the folder in your CLI
-Type: 'python main.py'
-Enjoy!
 
-# Game Rules:
 Diamonds are shields and are used to defeat monsters.
 Hearts are health potions.
 The other half of the deck is made up of monsters, with jesters (Donsols) being the strongest.
