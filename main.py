@@ -1,84 +1,102 @@
+import os
+
 from Donsol.Game import Game
 from Donsol.Deck import Deck
 from Donsol.Display import Display
-# a terrible, hideous file that handles the input loop and prints additional game state info
-gameOver = False
-firstMove = True
-canEscape = False
-escapedLast = False
+# handles the input loop, prints additional game state info
+
+gameOver = False # flag marking if the game has ended, does not say if the player won or not
+canEscape = False # flag marking if the player is allowed the escape the current room
+escapedLast = False # flag tracking if the player escaped from the last room without clearing it 
+turnNumber = 0
 game = Game()
 deck = Deck()
 display = Display()
+
 # create our first room
-print("You stand at the ruined entrance of the dungeon,\nthe bones and broken weapons of those who tried before you litter the ground.\nArmed with nothing but your wits,\nyou press forward to defeat the darkness.")
+if os.name == 'posix':
+  _ = os.system('clear')
+else: # for windows platfrom
+  _ = os.system('cls')
+display.Opening()
 game.currRoom = deck.createRoom()
-display.addRoom()
-# Start input loop
+game.incRoomNo() # increment room number to 1
+# the room then gets printed in the input loop
+
+# Start game loop
 while gameOver == False:
-  # print status
-  print('Cards Left: %d' % (deck.cardsLeft()))
-  stat = ''
-  if escapedLast and len(game.currRoom)!=1:
-    stat = stat+"There's no escape!  "
-  game.showStats()
-  if game.shield == 0:
-    stat = stat+'No Shield!  '
-  if game.broken and game.shield != 0:
-    stat = stat+'Shield damaged!  '
-  if game.poisoned:
-    stat = stat+'Healing!'
-  if stat != '':
-    print(stat)
-  # print room
-  display.displayRoom(game.currRoom)
-  # print actions
-  print('Select card#: 1-%d' % (len(game.currRoom)))
-  if firstMove:
-    print("Or enter 'r' to reshuffle the deck")
-  if len(game.currRoom) == 1 or (len(game.currRoom) == 4 and escapedLast == False and firstMove == False):
-    print("or enter 'e' to escape")
+  turnNumber+=1
+  print("---- Turn %d ----" %(turnNumber))
+
+  # if the is only 1 card left, or the room is full and the player can escape and this isnt the first move of the game
+  if game.getRoomSize() == 1 or (game.getRoomSize() == 4 and escapedLast == False):
     canEscape = True
   else:
     canEscape = False
+
+  # -- printing section --
+  # print game info
+  # show deck, health, and shield status
+  display.showStats(deck.cardsLeft(),game.getStats())
+  
+  # print alerts
+  display.showAlerts(escapedLast,game.getAlerts())
+
+  # print room
+  display.displayRoom(game.getRoom(), game.getRoomNo())
+
+  # print possible actions
+  display.showActions(game.getRoomSize(),deck.cardsLeft(),canEscape)
+
+  # -- input section --
   # take/validate input
   command = input()
-  if firstMove and command.lower() == 'r':
-    deck.escapeRoom(game.currRoom)
-    game.currRoom = deck.createRoom()
-  if canEscape and command.lower() == 'e':
-    if len(game.currRoom) != 1:
-      escapedLast = True
-    else:
-      escapedLast = False
-    if escapedLast:
-      print("You decide to leave that room alone.")
-    else:
-      if game.monsterCheck():
-        print("You dash past the creature and out of the room,\nits cries of anger the only thing chasing you.")
-      else:
-        print("You leave the items to rust.")
-    deck.escapeRoom(game.currRoom)
-    game.currRoom = deck.createRoom()
-    display.addRoom()
-  if (command.isnumeric() and int(command)<=len(game.currRoom)):
-    game.selectCard(int(command)-1)
-    firstMove = False
-  elif firstMove == False and canEscape == False:
-    print('bad input')
-  # check if player has cleared room
-  if game.emptyRoom():
-    print("The room is empty, you move on.")
-    game.currRoom = deck.createRoom()
-    display.addRoom()
-    escapedLast = False
-  # check if player has won the game
-  if (deck.containsMonsters() == False and game.monsterCheck() == False) or game.health <= 0:
+  # if deck is full and room is full then the player hasnt made a move yet and can reshuffle
+  if command.lower() == 'q':
     gameOver = True
-  # newline for formatting
-  print()
+    break
+  if deck.cardsLeft()==50 and game.getRoomSize()==4 and command.lower() == 'r':
+    print("Reshuffling...")
+    deck.escapeRoom(game.currRoom) # return the cards in the room to the deck
+    game.currRoom = deck.createRoom() # draw a new room
+
+  elif canEscape and command.lower() == 'e': # if the player can escape and chooses to
+    if game.getRoomSize() != 1: # if the room has more than card left
+      escapedLast = True # block the player from escaping the next room
+    else:
+      escapedLast = False # allow the player to escape the next room
+
+    # print message based on what type of escape the player just did
+    display.escapeMessage(escapedLast,game.monsterCheck())
+
+    deck.escapeRoom(game.getRoom()) # return the remaining cards to the deck
+    game.setRoom(deck.createRoom()) # draw a new room
+    game.incRoomNo() # increment the room counter
+
+  # if the player inputs a number and the number is <= the number of cards in the room
+  elif (command.isnumeric() and int(command)<=game.getRoomSize()): 
+    game.selectCard(int(command)-1) # adjust the input since the array is base 0 and activate that card  
+
+  # else the input is invalid
+  else:
+    print("bad input! :(")
+
+  # check if the player has won/lost the game
+  if (deck.containsMonsters() == False and game.monsterCheck() == False) or game.health <= 0:
+    gameOver = True # we test if the player has won outside of the main game loop
+
+  # if the player just activated the 3rd card in the rooom
+  if game.getRoomSize()==1:
+    print("A way out of the room becomes clear.")
+
+  # check if player has cleared room
+  if game.emptyRoom(): # if the room is empty
+    print("The room is empty, you move on.")
+    game.setRoom(deck.createRoom()) # draw new room
+    game.incRoomNo() # increment the room counter
+    escapedLast = False # allow the player to escape the next room
+
+  # -- end of game loop --
+
 # print out the final screen
-if(deck.containsMonsters() == False and game.monsterCheck() == False):
-  print("You emerge bloody and beaten from the dungeon,\nbut the Donsols have been defeated, the evil rests for now.")
-elif game.health <= 0:
-  print("The creature's blow lands true. You're unconcious before you strike the ground.")
-print('Game Over!')
+display.finalScreen(deck.containsMonsters(),game.monsterCheck(),game.checkHealth())
